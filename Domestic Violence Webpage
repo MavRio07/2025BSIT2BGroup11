@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>You Are Not Alone</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f9f7fb;
+    }
+    header {
+      background: #e0dce8;
+      padding: 15px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    /* nav links */
+    nav a {
+      margin: 0 10px;
+      text-decoration: none;
+      color: #333;
+      font-weight: bold;
+      cursor: pointer; /* pointer on hover */
+      padding-bottom: 6px; /* space for underline */
+      transition: color .15s;
+    }
+    /* underline for active nav item */
+    nav a.active-nav {
+      color: #5a4766;
+      border-bottom: 3px solid #5a4766;
+      border-radius: 2px 2px 0 0;
+    }
+
+    .quick-exit {
+      background: #ff4c4c;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+
+    .hero {
+      background: url(https://res.cloudinary.com/jerrick/image/upload/v1528400229/npbwxwbud0iaslco0wkj.jpg) center center/cover no-repeat;
+      padding: 100px 30px;
+      color: white;
+      text-align: center;
+      position: relative;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 0;
+    }
+    .hero h2, .hero a {
+      position: relative;
+      z-index: 1;
+    }
+    .hero h2 {
+      font-size: 36px;
+    }
+    .hero a {
+      display: inline-block;
+      background: #5a4766;
+      color: white;
+      padding: 10px 20px;
+      margin-top: 20px;
+      text-decoration: none;
+      border-radius: 5px;
+      cursor: pointer; /* pointer for CTA */
+    }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      padding: 30px;
+    }
+    .card {
+      background: #f1edf6;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      width: 200px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      cursor: pointer; /* pointer on hover */
+      transition: transform .12s, box-shadow .12s;
+      position: relative;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+
+    /* visual indicator for active card */
+    .card.active-card {
+      box-shadow: 0 8px 22px rgba(0,0,0,0.14);
+      outline: 3px solid rgba(90,71,102,0.12);
+    }
+    /* small line under the active card (like an underline) */
+    .card.active-card::after {
+      content: '';
+      position: absolute;
+      left: 20px;
+      right: 20px;
+      bottom: -6px;
+      height: 4px;
+      background: #5a4766;
+      border-radius: 4px;
+    }
+
+    .section {
+      padding: 30px;
+    }
+    .footer {
+      background: #ddd8e3;
+      text-align: center;
+      padding: 15px;
+      font-size: 14px;
+    }
+    .hidden {
+      display: none;
+    }
+    .active {
+      display: block;
+    }
+
+    #login {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #e8e3f5;
+    }
+    #login input {
+      padding: 10px;
+      margin: 10px;
+      width: 250px;
+      border: 1px solid #aaa;
+      border-radius: 5px;
+    }
+    #login button {
+      padding: 10px 20px;
+      background: #5a4766;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #login h2 {
+      margin-bottom: 10px;
+    }
+    #profile-name {
+      font-weight: bold;
+      color: #5a4766;
+    }
+
+    /* small responsive tweaks */
+    @media (max-width: 700px) {
+      .grid { gap: 12px; }
+      .card { width: 45%; }
+      nav { gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="login">
+  <h2>Please Log In</h2>
+  <input type="text" id="nameInput" placeholder="Full Name" />
+  <input type="email" id="emailInput" placeholder="Email Address" />
+  <button onclick="submitLogin()">Submit</button>
+</div>
+
+<div id="mainSite" class="hidden">
+  <header>
+    <h1>❤ Home</h1>
+    <nav>
+      <!-- add data-section attributes and a shared class for easy toggling -->
+      <a class="nav-link active-nav" data-section="home" onclick="showSection('home')">Home</a>
+      <a class="nav-link" data-section="about" onclick="showSection('about')">About Us</a>
+      <a class="nav-link" data-section="hotline" onclick="showSection('hotline')">Get Help</a>
+      <a class="nav-link" data-section="legal" onclick="showSection('legal')">Stories</a>
+      <span id="profile-name"></span>
+      <a class="quick-exit" href="https://www.google.com">QUICK EXIT</a>
+    </nav>
+  </header>
+
+  <div id="home" class="active">
+    <div class="hero">
+      <h2>YOU ARE NOT ALONE.</h2>
+      <a onclick="showSection('hotline')">GET HELP NOW</a>
+    </div>
+
+    <div class="grid">
+      <!-- add data-section attributes so JS can mark active card -->
+      <div class="card" data-section="hotline" onclick="showSection('hotline')">📞<br><strong>EMERGENCY HOTLINE</strong></div>
+      <div class="card" data-section="safety" onclick="showSection('safety')">🛡️<br><strong>CREATE A SAFETY PLAN</strong></div>
+      <div class="card" data-section="shelter" onclick="showSection('shelter')">🏠<br><strong>FIND A SHELTER</strong></div>
+      <div class="card" data-section="counselor" onclick="showSection('counselor')">🧑‍⚕️<br><strong>TALK TO A COUNSELOR</strong></div>
+    </div>
+  </div>
+
+  <div id="hotline" class="hidden section">
+    <h1>Emergency Hotline</h1>
+    <p>Call our 24/7 support line at <strong>1-800-123-4567</strong>.</p>
+    <a onclick="showSection('home')">← Back to Home</a>
+  </div>
+
+  <div id="safety" class="hidden section">
+    <h1>Create a Safety Plan</h1>
+    <p>Learn how to create a plan to stay safe and protect yourself.</p>
+    <a onclick="showSection('home')">← Back</a>
+  </div>
+
+  <div id="shelter" class="hidden section">
+    <h1>Find a Shelter</h1>
+    <p>Find local shelters in your area for temporary safety.</p>
+    <a onclick="showSection('home')">← Back</a>
+  </div>
+
+  <div id="counselor" class="hidden section">
+    <h1>Talk to a Counselor</h1>
+    <p>Speak to a professional counselor for emotional support.</p>
+    <a onclick="showSection('home')">← Back</a>
+  </div>
+
+  <div id="about" class="hidden section">
+    <h1>About Us</h1>
+    <p>We are here to help you. Our mission is to support survivors with compassion, safety, and care.</p>
+    <a onclick="showSection('home')">← Back</a>
+  </div>
+
+  <div id="legal" class="hidden section">
+    <h1>Stories</h1>
+    <p>Read real stories and experiences shared by others.</p>
+    <a onclick="showSection('home')">← Back</a>
+  </div>
+
+  <footer class="footer">
+    <p>Privacy Policy | Terms of Service</p>
+  </footer>
+</div>
+
+<script>
+  function submitLogin() {
+    const name = document.getElementById("nameInput").value.trim();
+    const email = document.getElementById("emailInput").value.trim();
+    if (!name || !email.includes("@")) {
+      alert("Please enter a valid name and email.");
+      return;
+    }
+    document.getElementById("profile-name").textContent = "Welcome, " + name;
+    document.getElementById("login").style.display = "none";
+    document.getElementById("mainSite").classList.remove("hidden");
+    // ensure home is visible and indicators set
+    showSection('home', true);
+  }
+
+  function showSection(id, skipFocus) {
+    // hide all mainSite > div sections and remove active class
+    const sections = document.querySelectorAll("#mainSite > div");
+    sections.forEach(sec => {
+      sec.classList.add("hidden");
+      sec.classList.remove("active");
+    });
+
+    // show requested section
+    const target = document.getElementById(id);
+    if (target) {
+      target.classList.remove("hidden");
+      target.classList.add("active");
+    }
+
+    // update nav link active state
+    const navLinks = document.querySelectorAll('nav .nav-link');
+    navLinks.forEach(link => {
+      if (link.dataset.section === id) {
+        link.classList.add('active-nav');
+      } else {
+        link.classList.remove('active-nav');
+      }
+    });
+
+    // update card active state
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+      if (card.dataset.section === id) {
+        card.classList.add('active-card');
+      } else {
+        card.classList.remove('active-card');
+      }
+    });
+
+    // optional: move focus to top of shown section for accessibility
+    if (!skipFocus && target) {
+      target.setAttribute('tabindex', '-1');
+      target.focus();
+    }
+  }
+
+  // allow keyboard Enter/Space to activate nav links and cards for accessibility
+  document.addEventListener('keydown', function(e) {
+    if ((e.key === 'Enter' || e.key === ' ') && document.activeElement) {
+      const el = document.activeElement;
+      if (el.classList.contains('nav-link') && el.dataset.section) {
+        showSection(el.dataset.section);
+      }
+      if (el.classList.contains('card') && el.dataset.section) {
+        showSection(el.dataset.section);
+      }
+    }
+  });
+
+  // make nav links and cards focusable via keyboard
+  document.querySelectorAll('.nav-link, .card').forEach(el => el.setAttribute('tabindex', '0'));
+
+  // initial state: hide all sections except home (handled when logging in)
+</script>
+</body>
+</html>
+
