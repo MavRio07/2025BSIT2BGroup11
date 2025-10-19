@@ -1,0 +1,45 @@
+[
+    {
+        "id": "alert_68f4f8b73aae71.33674276",
+        "user_name": "sussybaka",
+        "user_email": "jack033@gmail.com",
+        "message": "oh my gosh !! :0",
+        "urgency": "critical",
+        "status": "closed",
+        "timestamp": "2025-10-19 16:41:59",
+        "location": "bacolod",
+        "updated_at": "2025-10-19 16:42:32"
+    },
+    {
+        "id": "alert_68f4f89be4dea5.34105620",
+        "user_name": "da",
+        "user_email": "jepuerto31@gmail.com",
+        "message": "ded",
+        "urgency": "high",
+        "status": "pending",
+        "timestamp": "2025-10-19 16:41:31",
+        "location": "bacolod"
+    },
+    {
+        "id": "alert_68f4f8587ccc32.84852375",
+        "user_name": "AD",
+        "user_email": "asd@gmail.com",
+        "message": "im alive but im ded",
+        "urgency": "critical",
+        "status": "reviewing",
+        "timestamp": "2025-10-19 16:40:24",
+        "location": "bacolod",
+        "updated_at": "2025-10-19 16:42:17"
+    },
+    {
+        "id": "alert_68f4f7a09b8985.69456995",
+        "user_name": "jack",
+        "user_email": "JACK@GMAIL.COM",
+        "message": "ded",
+        "urgency": "medium",
+        "status": "resolved",
+        "timestamp": "2025-10-19 16:37:20",
+        "location": "bacolod",
+        "updated_at": "2025-10-19 16:37:35"
+    }
+]
