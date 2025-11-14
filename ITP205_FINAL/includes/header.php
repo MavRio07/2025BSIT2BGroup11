@@ -38,6 +38,7 @@ if (isAdmin()) {
         <nav class="desktop-nav">
             <ul>
                 <li><a href="index.php" class="<?php echo setActive('index.php'); ?>">Home</a></li>
+                <li><a href="history-report.php" class="<?php echo setActive('history-report.php'); ?>">History</a></li>
                 <li><a href="help.php" class="<?php echo setActive('help.php'); ?>">Get Help</a></li>
                 <li><a href="map.php" class="<?php echo setActive('map.php'); ?>">Safe Locations</a></li>
                 <li><a href="about.php" class="<?php echo setActive('about.php'); ?>">About</a></li>
@@ -73,36 +74,39 @@ if (isAdmin()) {
     
     <!-- Mobile navigation -->
     <nav class="mobile-nav" id="mobileNav">
-        <ul>
-            <?php if (isLoggedIn()): ?>
-                <li class="user-info-mobile">
-                    Welcome, <?php echo getUserName(); ?>
-                    <?php if (isAdmin()): ?>
-                        <span style="background: #dc3545; padding: 2px 6px; border-radius: 3px; font-size: 0.8rem; margin-left: 5px;">ADMIN</span>
-                    <?php endif; ?>
-                </li>
-            <?php endif; ?>
-            <li><a href="index.php" class="<?php echo setActive('index.php'); ?>" onclick="closeMobileMenu()">Home</a></li>
-            <li><a href="help.php" class="<?php echo setActive('help.php'); ?>" onclick="closeMobileMenu()">Get Help</a></li>
-            <li><a href="map.php" class="<?php echo setActive('map.php'); ?>" onclick="closeMobileMenu()">Safe Locations</a></li>
-            <li><a href="about.php" class="<?php echo setActive('about.php'); ?>" onclick="closeMobileMenu()">About</a></li>
-            <li><a href="stories.php" class="<?php echo setActive('stories.php'); ?>" onclick="closeMobileMenu()">Stories</a></li>
-            <?php if (isLoggedIn()): ?>
+    <ul>
+        <?php if (isLoggedIn()): ?>
+            <li class="user-info-mobile">
+                Welcome, <?php echo getUserName(); ?>
                 <?php if (isAdmin()): ?>
-                    <li>
-                        <a href="admin-alerts.php" class="<?php echo setActive('admin-alerts.php'); ?>" onclick="closeMobileMenu()" style="position: relative;">
-                            🚨 Alerts
-                            <?php if (isset($unreadAlertCount) && $unreadAlertCount > 0): ?>
-                                <span class="alert-badge"><?php echo $unreadAlertCount; ?></span>
-                            <?php endif; ?>
-                        </a>
-                    </li>
-                    <li><a href="admin-dashboard.php" class="<?php echo setActive('admin-dashboard.php'); ?>" onclick="closeMobileMenu()">Admin Dashboard</a></li>
+                    <span style="background: #dc3545; padding: 2px 6px; border-radius: 3px; font-size: 0.8rem; margin-left: 5px;">ADMIN</span>
                 <?php endif; ?>
-                <li><a href="logout.php" onclick="closeMobileMenu()">Logout</a></li>
+            </li>
+        <?php endif; ?>
+        <li><a href="index.php" class="<?php echo setActive('index.php'); ?>" onclick="closeMobileMenu()">Home</a></li>
+        
+        <li><a href="history-report.php" class="<?php echo setActive('history-report.php'); ?>" onclick="closeMobileMenu()">History</a></li> 
+        
+        <li><a href="help.php" class="<?php echo setActive('help.php'); ?>" onclick="closeMobileMenu()">Get Help</a></li>
+        <li><a href="map.php" class="<?php echo setActive('map.php'); ?>" onclick="closeMobileMenu()">Safe Locations</a></li>
+        <li><a href="about.php" class="<?php echo setActive('about.php'); ?>" onclick="closeMobileMenu()">About</a></li>
+        <li><a href="stories.php" class="<?php echo setActive('stories.php'); ?>" onclick="closeMobileMenu()">Stories</a></li>
+        <?php if (isLoggedIn()): ?>
+            <?php if (isAdmin()): ?>
+                <li>
+                    <a href="admin-alerts.php" class="<?php echo setActive('admin-alerts.php'); ?>" onclick="closeMobileMenu()" style="position: relative;">
+                        🚨 Alerts
+                        <?php if (isset($unreadAlertCount) && $unreadAlertCount > 0): ?>
+                            <span class="alert-badge"><?php echo $unreadAlertCount; ?></span>
+                        <?php endif; ?>
+                    </a>
+                </li>
+                <li><a href="admin-dashboard.php" class="<?php echo setActive('admin-dashboard.php'); ?>" onclick="closeMobileMenu()">Admin Dashboard</a></li>
             <?php endif; ?>
-        </ul>
-    </nav>
+            <li><a href="logout.php" onclick="closeMobileMenu()">Logout</a></li>
+        <?php endif; ?>
+    </ul>
+</nav>
 </header>
 
 <style>

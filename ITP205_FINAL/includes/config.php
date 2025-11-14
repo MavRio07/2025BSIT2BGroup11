@@ -2,7 +2,7 @@
 session_start();
 
 function isLoggedIn() {
-    return isset($_SESSION['user_name']) && isset($_SESSION['user_email']);
+    return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
 }
 
 function requireLogin() {
@@ -32,3 +32,18 @@ function getUserEmail() {
     return htmlspecialchars($_SESSION['user_email'] ?? '');
 }
 ?>
+
+<?php
+$servername = "localhost";
+$username = "root"; // your phpMyAdmin username
+$password = ""; // your phpMyAdmin password (often empty in localhost)
+$dbname = "mywebsite_db";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+  die("Connection failed: " . $conn->connect_error);
+}
+?>
+

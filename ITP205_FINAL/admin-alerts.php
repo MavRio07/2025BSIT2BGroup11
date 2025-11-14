@@ -5,36 +5,49 @@ require_once 'includes/config.php';
 require_once 'includes/data_functions.php';
 requireLogin();
 
+// Only admin access
 if (!isAdmin()) {
     header('Location: index.php');
     exit;
 }
 
-// Handle status update using $_POST with CSRF protection
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
+// Handle POST requests (update status or delete)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrfToken = $_POST['csrf_token'] ?? '';
     
     if (!validateCSRFToken($csrfToken)) {
         die('Invalid CSRF token');
     }
-    
+
     $alertId = $_POST['alert_id'] ?? '';
-    $newStatus = $_POST['status'] ?? '';
-    
-    if ($alertId && in_array($newStatus, ['pending', 'reviewing', 'resolved', 'closed'])) {
-        updateAlertStatus($alertId, $newStatus);
-        header('Location: admin-alerts.php?updated=1');
-        exit;
+
+    if (isset($_POST['delete_alert']) && $alertId) {
+        if (deleteAlert($alertId)) {
+            header('Location: admin-alerts.php?deleted=1');
+            exit;
+        } else {
+            header('Location: admin-alerts.php?error=delete_failed');
+            exit;
+        }
+    }
+
+    if (isset($_POST['update_status'])) {
+        $newStatus = $_POST['status'] ?? '';
+        if ($alertId && in_array($newStatus, ['pending', 'reviewing', 'resolved', 'closed'])) {
+            updateAlertStatus($alertId, $newStatus);
+            header('Location: admin-alerts.php?updated=1');
+            exit;
+        }
     }
 }
 
 // Get filter parameters from $_GET
-$filterStatus = isset($_GET['status']) ? $_GET['status'] : 'all';
-$filterUrgency = isset($_GET['urgency']) ? $_GET['urgency'] : 'all';
-$filterStartDate = isset($_GET['start_date']) ? $_GET['start_date'] : '';
-$filterEndDate = isset($_GET['end_date']) ? $_GET['end_date'] : '';
+$filterStatus = $_GET['status'] ?? 'all';
+$filterUrgency = $_GET['urgency'] ?? 'all';
+$filterStartDate = $_GET['start_date'] ?? '';
+$filterEndDate = $_GET['end_date'] ?? '';
 
-// Load and filter alerts
+// Load alerts from DB
 $alerts = filterAlerts(
     $filterStatus !== 'all' ? $filterStatus : null,
     $filterStartDate,
@@ -42,6 +55,7 @@ $alerts = filterAlerts(
     $filterUrgency !== 'all' ? $filterUrgency : null
 );
 
+// Count unread alerts
 $unreadCount = getUnreadAlertsCount();
 
 include 'includes/header.php';
@@ -68,7 +82,7 @@ include 'includes/header.php';
         </div>
     <?php endif; ?>
     
-    <!-- Filter Form using $_GET -->
+    <!-- Filter Form -->
     <div class="filter-panel">
         <h3>Filter Alerts</h3>
         <form method="GET" action="admin-alerts.php" class="filter-form">
@@ -167,7 +181,19 @@ include 'includes/header.php';
                             </select>
                             <button type="submit" name="update_status" class="update-btn">Update</button>
                         </form>
+                        
+                        <form method="POST" action="admin-alerts.php" class="delete-form" onsubmit="return confirmDelete();" style="display: inline;">
+                            <input type="hidden" name="alert_id" value="<?php echo htmlspecialchars($alert['id']); ?>">
+                            <?php echo getCSRFTokenField(); ?>
+                            <button type="submit" name="delete_alert" class="delete-btn">Delete</button>
+                        </form>
                     </div>
+
+                    <script>
+                    function confirmDelete() {
+                        return confirm("Are you sure you want to permanently delete this alert? This action cannot be undone.");
+                    }
+                    </script>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
@@ -175,12 +201,14 @@ include 'includes/header.php';
 </div>
 
 <style>
+
 .admin-header {
     margin-bottom: 2rem;
 }
 
 .alert-stats {
     display: flex;
+    flex-wrap: wrap;
     gap: 1.5rem;
     margin-top: 1.5rem;
 }
@@ -192,6 +220,7 @@ include 'includes/header.php';
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     text-align: center;
     min-width: 150px;
+    flex: 1 1 150px;
 }
 
 .pending-stat {
@@ -311,14 +340,17 @@ include 'includes/header.php';
 
 .alert-card.urgency-high {
     border-left-color: #ff6b6b;
+    background: #fff5f0;
 }
 
 .alert-card.urgency-medium {
     border-left-color: #ffc107;
+    background: #fff9e5;
 }
 
 .alert-card.urgency-low {
     border-left-color: #28a745;
+    background: #f3fff3;
 }
 
 .alert-header {
@@ -343,22 +375,10 @@ include 'includes/header.php';
     color: white;
 }
 
-.urgency-critical {
-    background: #dc3545;
-}
-
-.urgency-high {
-    background: #ff6b6b;
-}
-
-.urgency-medium {
-    background: #ffc107;
-    color: #333;
-}
-
-.urgency-low {
-    background: #28a745;
-}
+.urgency-critical { background: #dc3545; }
+.urgency-high { background: #ff6b6b; }
+.urgency-medium { background: #ffc107; color: #333; }
+.urgency-low { background: #28a745; }
 
 .status-badge {
     padding: 0.35rem 0.75rem;
@@ -367,25 +387,10 @@ include 'includes/header.php';
     font-weight: bold;
 }
 
-.status-pending {
-    background: #ffc107;
-    color: #333;
-}
-
-.status-reviewing {
-    background: #17a2b8;
-    color: white;
-}
-
-.status-resolved {
-    background: #28a745;
-    color: white;
-}
-
-.status-closed {
-    background: #6c757d;
-    color: white;
-}
+.status-pending { background: #ffc107; color: #333; }
+.status-reviewing { background: #17a2b8; color: white; }
+.status-resolved { background: #28a745; color: white; }
+.status-closed { background: #6c757d; color: white; }
 
 .alert-time {
     color: #666;
@@ -422,6 +427,7 @@ include 'includes/header.php';
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    flex-wrap: wrap;
 }
 
 .status-update-form label {
@@ -448,6 +454,20 @@ include 'includes/header.php';
     background: #5a67d8;
 }
 
+.delete-btn {
+    background: #dc3545;
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.delete-btn:hover {
+    background: #c82333;
+}
+
 .no-alerts {
     text-align: center;
     padding: 3rem;
@@ -457,20 +477,12 @@ include 'includes/header.php';
 }
 
 @media (max-width: 768px) {
-    .filter-form {
-        grid-template-columns: 1fr;
-    }
-    
-    .alert-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
-    .status-update-form {
-        flex-wrap: wrap;
-    }
+    .filter-form { grid-template-columns: 1fr; }
+    .alert-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    .status-update-form { flex-wrap: wrap; }
 }
+
+
 </style>
 
 <?php include 'includes/footer.php'; ?>

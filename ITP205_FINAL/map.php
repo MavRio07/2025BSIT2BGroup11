@@ -42,9 +42,8 @@ include 'includes/header.php';
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-
-
 <style>
+/* --- KEEP ALL CSS AS IS --- */
 #map {
     height: 600px;
     width: 100%;
@@ -139,9 +138,9 @@ include 'includes/header.php';
 
 <script>
 // Initialize map
-var map = L.map('map').setView([10.6765, 122.9511], 13);
+var map = L.map('map').setView([10.6765, 122.9511], 12);
 
-// Base tiles
+// Add OpenStreetMap tiles
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: '© OpenStreetMap contributors'
@@ -169,82 +168,47 @@ var supportIcon = L.icon({
   popupAnchor: [0, -35]
 });
 
-// Add markers
-L.marker([10.6765, 122.9511], { icon: policeIcon }).addTo(map)
-  .bindPopup("<b>Police Station</b><br>Bacolod City Police");
-  L.marker([10.67003, 122.94568], { icon: policeIcon }).addTo(map)
-  .bindPopup("<b>Police Station</b><br>Bacolod City Police");
-   L.marker([10.68433, 122.95495], { icon: policeIcon }).addTo(map)
-  .bindPopup("<b>Police Station</b><br>Bacolod City Police");
-   L.marker([10.69400, 122.95900], { icon: policeIcon }).addTo(map)
-  .bindPopup("<b>Police Station</b><br>Bacolod City Police");
-   L.marker([10.65450, 122.94850], { icon: policeIcon }).addTo(map)
-  .bindPopup("<b>Police Station</b><br>Bacolod City Police");
-
-
-
-L.marker([10.678, 122.953], { icon: shelterIcon }).addTo(map)
-  .bindPopup("<b>Shelter</b><br>Safe Haven Shelter");
-
-L.marker([10.674, 122.949], { icon: supportIcon }).addTo(map)
-  .bindPopup("<b>Support Center</b><br>Women's Support Center");
-
-</script>
-
-
-<script>
-
-// Function to escape HTML to prevent XSS
-function escapeHtml(unsafe) {
-    if (!unsafe) return '';
-    return unsafe
-        .toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+// Get the correct icon based on type
+function getMarkerIcon(type) {
+    switch(type) {
+        case 'police': return policeIcon;
+        case 'shelter': return shelterIcon;
+        case 'support': return supportIcon;
+        default: return supportIcon;
+    }
 }
 
-// Fetch and display markers
-fetch('admin-map-markers.php')
+// Escape HTML to prevent XSS
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe.toString()
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+}
+
+// Fetch markers from database via AJAX
+fetch('get-markers.php')
     .then(response => response.json())
     .then(data => {
         data.forEach(marker => {
-            let popupContent = `
+            var popupContent = `
                 <div class="popup-title">${escapeHtml(marker.name)}</div>
                 <span class="popup-type">${escapeHtml(marker.type)}</span>
-                <div class="popup-info">
-                    <strong>Address:</strong> ${escapeHtml(marker.address) || 'Not available'}
-                </div>
-                <div class="popup-info">
-                    <strong>Phone:</strong> ${escapeHtml(marker.phone) || 'Not available'}
-                </div>
-                <div class="popup-info">
-                    <strong>Services:</strong> ${escapeHtml(marker.description) || 'Contact for details'}
-                </div>
+                ${marker.address ? `<div class="popup-info"><strong>Address:</strong> ${escapeHtml(marker.address)}</div>` : ''}
+                ${marker.phone ? `<div class="popup-info"><strong>Phone:</strong> ${escapeHtml(marker.phone)}</div>` : ''}
+                ${marker.description ? `<div class="popup-info"><strong>Services:</strong> ${escapeHtml(marker.description)}</div>` : ''}
             `;
-            
-            L.marker([marker.lat, marker.lng], {
-                icon: getMarkerIcon(marker.type)
-            })
-            .bindPopup(popupContent)
-            .addTo(map);
+
+            L.marker([marker.lat, marker.lng], { icon: getMarkerIcon(marker.type) })
+                .bindPopup(popupContent)
+                .addTo(map);
         });
     })
-    .catch(error => {
-        console.error('Error loading markers:', error);
-    });
+    .catch(err => console.error('Error loading markers:', err));
+
 </script>
-<script>
-// Create the map
-var map = L.map('map').setView([10.6765, 122.9511], 12); // Bacolod coordinates
-
-// Add OpenStreetMap tiles
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '© OpenStreetMap contributors'
-}).addTo(map);
-
 
 <?php include 'includes/footer.php'; ?>

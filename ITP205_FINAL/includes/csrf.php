@@ -27,6 +27,7 @@ function validateCSRFToken() {
 
         return true;
     }
+    
 
     return false;
 }

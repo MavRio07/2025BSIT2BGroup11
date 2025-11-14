@@ -44,42 +44,47 @@ $alertSubmitted = false;
 $alertError = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_alert'])) {
-    // CSRF validation
-    $csrfToken = $_POST['csrf_token'] ?? '';
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (validateCSRFToken()) {
-        // Process the form here
-    }
-}
-
-    if (!validateCSRFToken($csrfToken)) {
+    if (!validateCSRFToken()) {
         $alertError = 'Invalid security token. Please try again.';
     } else {
-        // Sanitize and validate POST data
         $message = trim($_POST['message'] ?? '');
         $urgency = $_POST['urgency'] ?? 'medium';
         $location = trim($_POST['location'] ?? '');
-        
-        // Validation
+
         if (empty($message)) {
             $alertError = 'Please describe your situation.';
-        } elseif (strlen($message) < 0) {
+        } elseif (strlen($message) < 10) {
             $alertError = 'Please provide more details (at least 10 characters).';
         } else {
-            // Create alert
-            $alertData = [
-                'user_name' => getUserName(),
-                'user_email' => getUserEmail(),
-                'message' => htmlspecialchars($message, ENT_QUOTES, 'UTF-8'),
-                'urgency' => in_array($urgency, ['low', 'medium', 'high', 'critical']) ? $urgency : 'medium',
-                'location' => htmlspecialchars($location, ENT_QUOTES, 'UTF-8')
-            ];
-            
-            addAlert($alertData);
-            $alertSubmitted = true;
+            // use logged in user id
+            $userId = $_SESSION['user_id'] ?? null;
+
+            if (!$userId) {
+                $alertError = 'User session not found. Please log in again.';
+            } else {
+                $helpLevel = in_array($urgency, ['low','medium','high','critical']) ? $urgency : 'medium';
+                $description = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+                $locationSafe = htmlspecialchars($location, ENT_QUOTES, 'UTF-8');
+                $currentTime = date('Y-m-d H:i:s');
+
+                $stmt = $conn->prepare("
+                    INSERT INTO emergencies (user_id, help_level, location, description, time)
+                    VALUES (?, ?, ?, ?, ?)
+                ");
+                $stmt->bind_param("issss", $userId, $helpLevel, $locationSafe, $description, $currentTime);
+
+                if ($stmt->execute()) {
+                    $alertSubmitted = true;
+                } else {
+                    $alertError = 'Failed to submit your emergency alert. Please try again.';
+                }
+            }
         }
     }
 }
+
+
+
 
 include 'includes/header.php';
 ?>

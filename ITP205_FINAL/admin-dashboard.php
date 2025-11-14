@@ -10,7 +10,7 @@ if (!isAdmin()) {
 }
 
 $unreadAlerts = getUnreadAlertsCount();
-$totalMarkers = count(loadMarkers());
+$totalMarkers = count(getMarkers());
 
 include 'includes/header.php';
 ?>
@@ -45,7 +45,7 @@ include 'includes/header.php';
             <p>See all safe locations on the map</p>
         </div>
         
-        <div class="admin-card" onclick="location.href='#'" tabindex="0" role="button">
+        <div class="admin-card" onclick="location.href='admin-users.php'" tabindex="0" role="button">
             <h3>👥 User Management</h3>
             <p>View and manage user accounts</p>
         </div>

@@ -1,7 +1,8 @@
 let mobileMenuOpen = false
 
 document.addEventListener("DOMContentLoaded", () => {
-  initializeApp()
+    initializeApp()
+    toggleLoginFields()
 })
 
 function initializeApp() {

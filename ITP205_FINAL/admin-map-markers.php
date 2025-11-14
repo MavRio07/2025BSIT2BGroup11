@@ -1,8 +1,9 @@
 <?php
-$page_title = 'Manage Map Markers - Admin';
 require_once 'includes/config.php';
 require_once 'includes/data_functions.php';
 requireLogin();
+
+$page_title = 'Manage Map Markers - Admin';
 
 if (!isAdmin()) {
     header('Location: index.php');
@@ -12,7 +13,20 @@ if (!isAdmin()) {
 $message = '';
 $error = '';
 
-// Handle marker operations using $_POST with CSRF protection
+// CSRF token generation
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+function getCSRFTokenField() {
+    return '<input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">';
+}
+
+function validateCSRFToken($token) {
+    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+// Handle marker operations using $_POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrfToken = $_POST['csrf_token'] ?? '';
     
@@ -37,29 +51,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Latitude and Longitude must be valid numbers.';
         } else {
             $markerData = [
-                'name' => htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
+                'name' => $name,
                 'type' => in_array($type, ['police', 'shelter', 'support']) ? $type : 'support',
                 'lat' => floatval($lat),
                 'lng' => floatval($lng),
-                'address' => htmlspecialchars($address, ENT_QUOTES, 'UTF-8'),
-                'phone' => htmlspecialchars($phone, ENT_QUOTES, 'UTF-8'),
-                'description' => htmlspecialchars($description, ENT_QUOTES, 'UTF-8')
+                'address' => $address,
+                'phone' => $phone,
+                'description' => $description
             ];
             
-            addMarker($markerData);
-            $message = 'Marker added successfully!';
+            if (addMarker($markerData)) {
+                $message = 'Marker added successfully!';
+            } else {
+                $error = 'Failed to add marker. Please try again.';
+            }
         }
     } elseif (isset($_POST['delete_marker'])) {
         // Delete marker
         $markerId = intval($_POST['marker_id'] ?? 0);
         if ($markerId > 0) {
-            deleteMarker($markerId);
-            $message = 'Marker deleted successfully!';
+            if (deleteMarker($markerId)) {
+                $message = 'Marker deleted successfully!';
+            } else {
+                $error = 'Failed to delete marker. Please try again.';
+            }
         }
     }
 }
 
-$markers = loadMarkers();
+// Fetch markers from database
+$markers = getMarkers();
 
 include 'includes/header.php';
 ?>

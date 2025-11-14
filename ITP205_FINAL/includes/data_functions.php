@@ -1,249 +1,168 @@
 <?php
-// Data storage functions for alerts and markers with improved error handling
+// refactored alert/marker functions to fully rely sa db
 
-function getAlertsFilePath() {
-    return __DIR__ . '/../data/alerts.json';
+// inserts alert sa db
+function addAlert($userId, $message, $urgency = 'medium', $location = '') {
+    global $conn;
+
+    $urgencyLevels = ['low', 'medium', 'high', 'critical'];
+    $helpLevel = in_array($urgency, $urgencyLevels) ? $urgency : 'medium';
+    $description = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+    $locationSafe = htmlspecialchars($location, ENT_QUOTES, 'UTF-8');
+    $currentTime = date('Y-m-d H:i:s');
+
+    $stmt = $conn->prepare("
+        INSERT INTO emergencies (user_id, help_level, location, description, time, status)
+        VALUES (?, ?, ?, ?, ?, 'pending')
+    ");
+    $stmt->bind_param("issss", $userId, $helpLevel, $locationSafe, $description, $currentTime);
+
+    if ($stmt->execute()) {
+        return $stmt->insert_id;
+    }
+    return false;
 }
 
-function getMarkersFilePath() {
-    return __DIR__ . '/../data/markers.json';
+// update alert status sa db
+function updateAlertStatus($alertId, $newStatus) {
+    global $conn;
+    $validStatuses = ['pending', 'reviewing', 'resolved', 'closed'];
+    if (!in_array($newStatus, $validStatuses)) return false;
+
+    $stmt = $conn->prepare("UPDATE emergencies SET status = ? WHERE id = ?");
+    $stmt->bind_param("si", $newStatus, $alertId);
+    return $stmt->execute();
 }
 
-// Alert functions with file locking
-function loadAlerts() {
-    $file = getAlertsFilePath();
-    if (!file_exists($file)) {
-        return [];
-    }
-    
-    $fp = fopen($file, 'r');
-    if (!$fp) {
-        return [];
-    }
-    
-    if (flock($fp, LOCK_SH)) {
-        $data = fread($fp, filesize($file) ?: 1);
-        flock($fp, LOCK_UN);
-        fclose($fp);
-        
-        $decoded = json_decode($data, true);
-        return is_array($decoded) ? $decoded : [];
-    }
-    
-    fclose($fp);
-    return [];
-}
-
-function saveAlerts($alerts) {
-    $file = getAlertsFilePath();
-    $fp = fopen($file, 'w');
-    
-    if (!$fp) {
-        return false;
-    }
-    
-    if (flock($fp, LOCK_EX)) {
-        fwrite($fp, json_encode($alerts, JSON_PRETTY_PRINT));
-        flock($fp, LOCK_UN);
-    }
-    
-    fclose($fp);
-    return true;
-}
-
-function addAlert($alertData) {
-    $alerts = loadAlerts();
-    
-    // Input size limits
-    $message = substr($alertData['message'] ?? '', 0, 5000);
-    $location = substr($alertData['location'] ?? '', 0, 200);
-    
-    $newAlert = [
-        'id' => uniqid('alert_', true),
-        'user_name' => substr($alertData['user_name'] ?? 'Anonymous', 0, 100),
-        'user_email' => substr($alertData['user_email'] ?? '', 0, 100),
-        'message' => $message,
-        'urgency' => in_array($alertData['urgency'] ?? '', ['low', 'medium', 'high', 'critical']) ? $alertData['urgency'] : 'medium',
-        'status' => 'pending',
-        'timestamp' => date('Y-m-d H:i:s'),
-        'location' => $location
-    ];
-    
-    array_unshift($alerts, $newAlert);
-    
-    // Keep only last 1000 alerts
-    if (count($alerts) > 1000) {
-        $alerts = array_slice($alerts, 0, 1000);
-    }
-    
-    saveAlerts($alerts);
-    return $newAlert;
-}
-
-function updateAlertStatus($alertId, $status) {
-    if (!in_array($status, ['pending', 'reviewing', 'resolved', 'closed'])) {
-        return false;
-    }
-    
-    $alerts = loadAlerts();
-    $updated = false;
-    
-    foreach ($alerts as &$alert) {
-        if ($alert['id'] === $alertId) {
-            $alert['status'] = $status;
-            $alert['updated_at'] = date('Y-m-d H:i:s');
-            $updated = true;
-            break;
-        }
-    }
-    
-    if ($updated) {
-        saveAlerts($alerts);
-    }
-    
-    return $updated;
-}
-
+// count unread alerts na may 'pending' status
 function getUnreadAlertsCount() {
-    try {
-        $alerts = loadAlerts();
-        $count = 0;
-        foreach ($alerts as $alert) {
-            if (isset($alert['status']) && $alert['status'] === 'pending') {
-                $count++;
-            }
-        }
-        return $count;
-    } catch (Exception $e) {
-        return 0;
-    }
+    global $conn;
+    $result = $conn->query("SELECT COUNT(*) AS cnt FROM emergencies WHERE status = 'pending'");
+    $row = $result->fetch_assoc();
+    return $row['cnt'] ?? 0;
 }
 
-function filterAlerts($status = null, $startDate = null, $endDate = null, $urgency = null) {
-    $alerts = loadAlerts();
-    $filtered = $alerts;
+// filter alerts from db
+function filterAlerts($status = null, $startDate = '', $endDate = '', $urgency = null) {
+    global $conn;
+
+    $query = "SELECT e.*, u.name AS user_name, u.email AS user_email
+              FROM emergencies e
+              LEFT JOIN users u ON e.user_id = u.id
+              WHERE 1=1";
     
-    if ($status && $status !== 'all') {
-        $filtered = array_filter($filtered, function($alert) use ($status) {
-            return isset($alert['status']) && $alert['status'] === $status;
-        });
+    $params = [];
+    $types = '';
+
+    if ($status) {
+        $query .= " AND e.status = ?";
+        $params[] = $status;
+        $types .= 's';
     }
-    
-    if ($urgency && $urgency !== 'all') {
-        $filtered = array_filter($filtered, function($alert) use ($urgency) {
-            return isset($alert['urgency']) && $alert['urgency'] === $urgency;
-        });
+
+    if ($urgency) {
+        $query .= " AND e.help_level = ?";
+        $params[] = $urgency;
+        $types .= 's';
     }
-    
-    if ($startDate && preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
-        $startTimestamp = strtotime($startDate . ' 00:00:00');
-        $filtered = array_filter($filtered, function($alert) use ($startTimestamp) {
-            return isset($alert['timestamp']) && strtotime($alert['timestamp']) >= $startTimestamp;
-        });
+
+    if ($startDate) {
+        $query .= " AND e.time >= ?";
+        $params[] = $startDate . ' 00:00:00';
+        $types .= 's';
     }
-    
-    if ($endDate && preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
-        $endTimestamp = strtotime($endDate . ' 23:59:59');
-        $filtered = array_filter($filtered, function($alert) use ($endTimestamp) {
-            return isset($alert['timestamp']) && strtotime($alert['timestamp']) <= $endTimestamp;
-        });
+
+    if ($endDate) {
+        $query .= " AND e.time <= ?";
+        $params[] = $endDate . ' 23:59:59';
+        $types .= 's';
     }
-    
-    return array_values($filtered);
+
+    $query .= " ORDER BY e.time DESC";
+
+    $stmt = $conn->prepare($query);
+    if ($params) {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $alerts = [];
+    while ($row = $result->fetch_assoc()) {
+        $alerts[] = [
+            'id' => $row['id'],
+            'user_name' => $row['user_name'] ?? 'Anonymous',
+            'user_email' => $row['user_email'] ?? '',
+            'urgency' => $row['help_level'],
+            'status' => $row['status'],
+            'location' => $row['location'],
+            'message' => $row['description'],
+            'timestamp' => $row['time']
+        ];
+    }
+
+    return $alerts;
 }
 
-// Marker functions with file locking
-function loadMarkers() {
-    $file = getMarkersFilePath();
-    if (!file_exists($file)) {
-        return [];
-    }
-    
-    $fp = fopen($file, 'r');
-    if (!$fp) {
-        return [];
-    }
-    
-    if (flock($fp, LOCK_SH)) {
-        $data = fread($fp, filesize($file) ?: 1);
-        flock($fp, LOCK_UN);
-        fclose($fp);
-        
-        $decoded = json_decode($data, true);
-        return is_array($decoded) ? $decoded : [];
-    }
-    
-    fclose($fp);
-    return [];
-}
+//delete alerts sa db
+function deleteAlert($alertId) {
+    global $conn;
+    $stmt = $conn->prepare("DELETE FROM emergencies WHERE id = ?");
+    $stmt->bind_param("i", $alertId);
+    return $stmt->execute();
+ }
 
-function saveMarkers($markers) {
-    $file = getMarkersFilePath();
-    $fp = fopen($file, 'w');
-    
-    if (!$fp) {
-        return false;
-    }
-    
-    if (flock($fp, LOCK_EX)) {
-        fwrite($fp, json_encode($markers, JSON_PRETTY_PRINT));
-        flock($fp, LOCK_UN);
-    }
-    
-    fclose($fp);
-    return true;
-}
+// marker functions //
 
+// insert markers sa db
 function addMarker($markerData) {
-    $markers = loadMarkers();
-    $maxId = 0;
-    
-    foreach ($markers as $marker) {
-        if (isset($marker['id']) && is_numeric($marker['id']) && $marker['id'] > $maxId) {
-            $maxId = intval($marker['id']);
-        }
-    }
-    
-    // Input validation and size limits
+    global $conn;
+
     $name = substr(strip_tags($markerData['name'] ?? ''), 0, 200);
-    $type = in_array($markerData['type'] ?? '', ['police', 'shelter', 'support']) ? $markerData['type'] : 'support';
+    $type = in_array($markerData['type'] ?? '', ['police','shelter','support']) ? $markerData['type'] : 'support';
     $lat = floatval($markerData['lat'] ?? 0);
     $lng = floatval($markerData['lng'] ?? 0);
     $address = substr(strip_tags($markerData['address'] ?? ''), 0, 300);
     $phone = substr(strip_tags($markerData['phone'] ?? ''), 0, 50);
     $description = substr(strip_tags($markerData['description'] ?? ''), 0, 500);
-    
-    $newMarker = [
-        'id' => $maxId + 1,
-        'name' => $name,
-        'type' => $type,
-        'lat' => $lat,
-        'lng' => $lng,
-        'address' => $address,
-        'phone' => $phone,
-        'description' => $description
-    ];
-    
-    $markers[] = $newMarker;
-    saveMarkers($markers);
-    return $newMarker;
-}
 
-function deleteMarker($markerId) {
-    $markers = loadMarkers();
-    $markers = array_filter($markers, function($marker) use ($markerId) {
-        return !isset($marker['id']) || $marker['id'] != $markerId;
-    });
-    saveMarkers(array_values($markers));
-}
-
-function getMarkerById($markerId) {
-    $markers = loadMarkers();
-    foreach ($markers as $marker) {
-        if (isset($marker['id']) && $marker['id'] == $markerId) {
-            return $marker;
-        }
+    $stmt = $conn->prepare("
+        INSERT INTO markers (name, type, lat, lng, address, phone, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ");
+    $stmt->bind_param("ssddsss", $name, $type, $lat, $lng, $address, $phone, $description);
+    
+    if ($stmt->execute()) {
+        return $stmt->insert_id;
     }
-    return null;
+    return false;
+}
+
+// fetch tanan markers sa db
+function getMarkers() { 
+    global $conn;
+    $result = $conn->query("SELECT * FROM markers ORDER BY created_at DESC");
+    $markers = [];
+    while ($row = $result->fetch_assoc()) {
+        $markers[] = $row;
+    }
+    return $markers;
+}
+
+// delete marker sa db
+function deleteMarker($markerId) {
+    global $conn;
+    $stmt = $conn->prepare("DELETE FROM markers WHERE id = ?");
+    $stmt->bind_param("i", $markerId);
+    return $stmt->execute();
+}
+
+// fetch marker by id
+function getMarkerById($markerId) {
+    global $conn;
+    $stmt = $conn->prepare("SELECT * FROM markers WHERE id = ?");
+    $stmt->bind_param("i", $markerId);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
 }
 ?>
